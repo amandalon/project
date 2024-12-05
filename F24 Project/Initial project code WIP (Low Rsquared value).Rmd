@@ -1,0 +1,271 @@
+---
+title: "Untitled"
+author: "Isaac Finkell"
+date: "2024-12-03"
+output: html_document
+---
+```{r}
+# omits any data that we won't be working with, along with any properties with a $0 sale price.AA
+raw_data <- Real_Estate_Sales_2001.2022_GL
+clean_data <- raw_data[raw_data$'Sale.Amount' != 0, c('List.Year', 'Date.Recorded', 'Town', 'Assessed.Value', 'Sale.Amount', 'Sales.Ratio', 'Residential.Type')]
+clean_data = clean_data[clean_data$'Residential.Type' != "", c('List.Year', 'Date.Recorded', 'Town', 'Assessed.Value', 'Sale.Amount', 'Sales.Ratio', 'Residential.Type')]
+```
+
+```{r}
+library(dplyr)
+
+inflation.scalar = c('2001' = 1, '2002' = 0.9887069, '2003' = 0.9636764, '2004' = 0.9454644, '2005' = 0.9181961, '2006' = 0.8830055, '2007' = 0.8650502, '2008' = 0.8295433, '2009' = 0.8292958, '2010' = 0.8080780, '2011' = 0.7951031, '2012' = 0.7725057, '2013' = 0.7603787, '2014' = 0.7485593, '2015' = 0.7492287, '2016' = 0.7390805, '2017' = 0.7210539, '2018' = 0.7064272, '2019' = 0.6956363, '2020' = 0.6787585, '2021' = 0.6693886, '2022' = 0.6228036)
+#Data sourced from the Bureau of Labor Statistics CPI calculator using January to January values
+
+clean_data$Inflation.Adjusted = round(clean_data$Sale.Amount * inflation.scalar[as.character(clean_data$List.Year)], 2)
+
+```
+
+```{r}
+#Outlier Removal
+library(dplyr)
+
+iqr = IQR(clean_data$Inflation.Adjusted)
+upper =  quantile(clean_data$Inflation.Adjusted, 0.75)+1.5*iqr
+lower =  quantile(clean_data$Inflation.Adjusted, 0.25)-1.5*iqr
+
+clean_data = subset(clean_data, clean_data$Inflation.Adjusted > lower & clean_data$Inflation.Adjusted < upper) 
+```
+
+
+```{r}
+library(dplyr)
+set.seed(411)
+n_years = length(unique(clean_data$List.Year))
+sample_size_per_group = round(2000 / n_years)
+sampled_data = clean_data %>%
+  group_by(List.Year, Residential.Type) %>%
+  slice_sample(n = sample_size_per_group)
+
+sampled_data$Inflation.Adjusted = round(sampled_data$Sale.Amount * inflation.scalar[as.character(sampled_data$List.Year)], 2)
+nrow(sampled_data)
+```
+
+
+
+```{r}
+#Analysis
+lin.inflat = lm(sampled_data$Inflation.Adjusted ~ sampled_data$Residential.Type + sampled_data$Town + sampled_data$List.Year)
+first.fit = summary(lin.inflat)
+first.fit
+
+#Towns are not statistically significant indicators
+lin.inflat2 = lm(sqrt(sampled_data$Inflation.Adjusted) ~ sampled_data$Residential.Type + sampled_data$List.Year)
+second.fit = summary(lin.inflat2)
+second.fit
+
+lin.inflat3 = lm(sqrt(sampled_data$Inflation.Adjusted) ~ sampled_data$Residential.Type + sampled_data$Town + sampled_data$List.Year)
+third.fit = summary(lin.inflat3)
+third.fit
+
+lin.inflat4 = lm(log(sampled_data$Inflation.Adjusted) ~ sampled_data$Residential.Type + sampled_data$Town + sampled_data$List.Year)
+fourth.fit = summary(lin.inflat4)
+fourth.fit
+#The year and residence type are both statistically significant
+```
+```{r}
+```
+
+```{r}
+library(car)
+vif(lin.inflat3)
+vif(lin.inflat2)
+vif(lin.inflat)
+vif(lin.inflat4)
+```
+
+```{r}
+#Visualization
+
+library(ggplot2)
+ggplot(data = sampled_data, aes(x = List.Year, y = sqrt(Inflation.Adjusted))) + 
+  geom_jitter(color = 'black', width = 1, height = 0.1) + 
+  geom_smooth(method = "lm", color = "blue", se = FALSE) + 
+  facet_wrap(~ Residential.Type) +
+  theme_minimal() +
+  labs(title = "Log of Inflation Adjusted Price by Residential Type Over Time",
+       x = "List Year", 
+       y = "Log of Inflation Adjusted Price") +
+  theme(legend.position = "none")
+```
+
+
+
+```{r}
+plot(lin.inflat2)
+
+```
+
+```{r}
+hist(sqrt(sampled_data$Inflation.Adjusted))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Merge data function.
+combine_data_by_year <- function(years_data) {
+  # Combine a single data set.
+  combined_data <- do.call(rbind, years_data)
+  return(combined_data)
+}
+
+# Merge single-family data.
+single_family_data <- list(single_2001, single_2002, single_2003, single_2004, single_2005, single_2006, single_2007,
+                           single_2008, single_2009, single_2010, single_2011, single_2012, single_2013, single_2014,
+                           single_2015, single_2016, single_2017, single_2018, single_2019, single_2020, single_2021, single_2022)
+
+single_family_combined <- combine_data_by_year(single_family_data)
+
+# Merge two family data.
+two_family_data <- list(two_fam_2001, two_fam_2002, two_fam_2003, two_fam_2004, two_fam_2005, two_fam_2006, two_fam_2007,
+                        two_fam_2008, two_fam_2009, two_fam_2010, two_fam_2011, two_fam_2012, two_fam_2013, two_fam_2014,
+                        two_fam_2015, two_fam_2016, two_fam_2017, two_fam_2018, two_fam_2019, two_fam_2020, two_fam_2021, two_fam_2022)
+
+two_family_combined <- combine_data_by_year(two_family_data)
+
+# Merge three-family data.
+three_family_data <- list(three_fam_2001, three_fam_2002, three_fam_2003, three_fam_2004, three_fam_2005, three_fam_2006,
+                          three_fam_2007, three_fam_2008, three_fam_2009, three_fam_2010, three_fam_2011, three_fam_2012,
+                          three_fam_2013, three_fam_2014, three_fam_2015, three_fam_2016, three_fam_2017, three_fam_2018,
+                          three_fam_2019, three_fam_2020, three_fam_2021, three_fam_2022)
+
+three_family_combined <- combine_data_by_year(three_family_data)
+
+# Merge four-family data.
+four_family_data <- list(four_fam_2001, four_fam_2002, four_fam_2003, four_fam_2004, four_fam_2005, four_fam_2006,
+                         four_fam_2007, four_fam_2008, four_fam_2009, four_fam_2010, four_fam_2011, four_fam_2012,
+                         four_fam_2013, four_fam_2014, four_fam_2015, four_fam_2016, four_fam_2017, four_fam_2018,
+                         four_fam_2019, four_fam_2020, four_fam_2021, four_fam_2022)
+
+four_family_combined <- combine_data_by_year(four_family_data)
+
+
+
+###############################################################################
+# 1 Analyze the factors affecting property sale prices
+# 
+# 2 Identify the features influencing price (e.g., area, age of the property, renovation status, etc.).
+# 
+# 
+# 3 Calculate the average sale price of each property type per year and plot the trend over time.
+# ：
+# 
+# 4 Compare the differences between sold and unsold properties in terms of price, area, property age, renovation status, etc.Compare the differences between sold and unsold properties in terms of price, area, property age, renovation status, etc.
+# 
+# 
+# 5 Calculate the property turnover rate for each town (percentage of sold properties out of the total number of properties).
+# 
+# 
+# 6 Analyze the listing duration of properties and compare sold and unsold properties to assess market liquidity.
+# 
+
+library(kableExtra)
+
+# (1) Analyze the factors affecting property sale prices
+combined_data <- rbind(single_family_combined, two_family_combined, three_family_combined, four_family_combined)
+
+combined_data$Date_Recorded <- as.Date(combined_data$Date_Recorded, format = "%m/%d/%Y")
+
+head(combined_data$Date_Recorded)
+
+
+lm_result <- lm(Sale.Amount ~ Sales.Ratio  + Residential.Type, data = combined_data)
+summary(lm_result)
+
+# properties with Sales_Ratio < 1 are considered unsold, while those with Sales_Ratio == 1 are considered sold.
+sold_properties <- subset(combined_data, Sales_Ratio == 1)
+unsold_properties <- subset(combined_data, Sales_Ratio < 1)
+
+# Compare the differences between sold and unsold properties.
+summary_sold <- summary(sold_properties$Sale.Amount)
+summary_sold
+summary_unsold <- summary(unsold_properties$Sale.Amount)
+summary_unsold
+
+# Create a DataFrame to display the price comparison between sold and unsold properties.
+sale_comparison <- data.frame(
+  Category = c("Min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"),
+  Sold = as.numeric(summary_sold),
+  Unsold = as.numeric(summary_unsold)
+)
+
+sale_comparison %>%
+  kable("html", col.names = c("Statistic", "Sold Properties", "Unsold Properties")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# Property Turnover Rate
+town_turnover_rate <- aggregate(Sales_Ratio ~ Town, data = combined_data, FUN = function(x) sum(x == 1) / length(x))
+print(town_turnover_rate)
+town_turnover_rate %>%
+  kable("html", col.names = c("Town", "Turnover Rate")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# Analyze the liquidity of the real estate market.
+# The listing duration is recorded in the Date_Recorded column.
+# Compute the average listing duration for sold and unsold properties.
+sold_properties$Date_Recorded <- as.Date(sold_properties$Date_Recorded, format = "%Y-%m-%d")
+unsold_properties$Date_Recorded <- as.Date(unsold_properties$Date_Recorded, format = "%Y-%m-%d")
+
+sold_properties$listing_duration <- as.numeric(difftime(Sys.Date(), sold_properties$Date_Recorded, units = "days"))
+unsold_properties$listing_duration <- as.numeric(difftime(Sys.Date(), unsold_properties$Date_Recorded, units = "days"))
+
+avg_listing_duration_sold <- mean(sold_properties$listing_duration, na.rm = TRUE)
+avg_listing_duration_unsold <- mean(unsold_properties$listing_duration, na.rm = TRUE)
+
+# Use inflation-adjusted sale prices.
+inflation_data <- data.frame(
+  List_Year = 2006:2023,
+  Inflation_Rate = c(3.2, 2.5, 1.9, 3.1, 2.4, 1.7, 1.9, 2.0, 2.3, 1.8, 2.0, 2.5, 1.9, 2.2, 2.6, 3.1, 2.8, 2.7)  
+)
+
+combined_data <- merge(combined_data, inflation_data, by = "List_Year", all.x = TRUE)
+avg_inflation_adjusted_price_per_year <- aggregate(Inflation_Adjusted_Sale_Amount ~ List_Year, data = combined_data, FUN = mean)
+```

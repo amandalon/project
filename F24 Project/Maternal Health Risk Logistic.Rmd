@@ -30,7 +30,6 @@ MRH = MRH[MRH$RiskLevel != 'mid risk',]
 MRH$RiskLevel = ifelse(MRH$RiskLevel == 'high risk', 1, 0)
 ```
 
-
 ```{r}
 library(GGally)
 library(ggplot2)
@@ -61,6 +60,7 @@ vif1
 vif2
 vif3
 ```
+
 ```{r}
 predicted = predict(MRH.logreg2, type = "response")
 pred.risk = ifelse(predicted > 0.35, 1, 0)
@@ -71,8 +71,10 @@ predicted2 = predict(MRH.logreg3, type = "response")
 pred.risk2 = ifelse(predicted2 > 0.35, 1, 0)
 conf.table = table(pred.risk2, MRH$RiskLevel)
 conf.table
+
 #We select for the second model which excludes heart rate as we receive a better confusion matrix
 ```
+
 ```{r}
 plot(predicted2)
 ```
@@ -97,9 +99,8 @@ FPR
 TPR
 PPv
 NPv
+Stats <- c('False Positive Rate', 'True Positive Rate', 'Positive Predicted Value', 'Negative Predicted Value')
+Values <- c(FPR, TPR, PPv, NPv)
+data.frame(Stats, Values)
+
 ```
-
-
-
-
-

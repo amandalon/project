@@ -1,6 +1,7 @@
+```{r pressure, echo=FALSE}
 # omits any data that we won't be working with, along with any properties with a $0 sale price.AA
-raw_data <- Real_Estate_Sales_2001_2022_GL
-clean_data <- raw_data[raw_data$`Sale Amount` != 0, c('List Year', 'Date Recorded', 'Town', 'Sale Amount', 'Sales Ratio', 'Residential Type')]
+raw_data <- Real_Estate_Sales_2001.2022_GL
+clean_data <- raw_data[raw_data$'Sale.Amount' != 0, c('List.Year', 'Date.Recorded', 'Town', 'Sale.Amount', 'Sales.Ratio', 'Residential.Type')]
 
 # sort data based on year.AA
 timeframe <- 2001:2022
@@ -197,3 +198,13 @@ four_fam_2019 <- data_by_year_residential[["2019"]][["Four Family"]]
 four_fam_2020 <- data_by_year_residential[["2020"]][["Four Family"]]
 four_fam_2021 <- data_by_year_residential[["2021"]][["Four Family"]]
 four_fam_2022 <- data_by_year_residential[["2022"]][["Four Family"]]
+```
+
+```{r}
+library(dplyr)
+
+inflation.scalar = c('2001' = 1, '2002' = 0.99, '2003' = 0.96, '2004' = 0.95, '2005' = 0.92, '2006' = 0.88, '2007' = 0.87, '2008' = 0.83, '2009' = 0.83, '2010' = 0.81, '2011' = 0.80, '2012' = 0.77, '2013' = 0.76, '2014' = 0.75, '2015' = 0.75, '2016' = 0.74, '2017' = 0.72, '2018' = 0.71, '2019' = 0.70, '2020' = 0.68, '2021' = 0.67, '2022' = 0.62)
+#Data sourced from the Bureau of Labor Statistics CPI calculator using January to January values
+
+clean_data$Inflation.Adjusted = clean_data$Sale.Amount * inflation.scalar[as.character(clean_data$List.Year)]
+```

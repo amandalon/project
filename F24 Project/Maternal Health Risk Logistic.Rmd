@@ -1,34 +1,38 @@
 ---
-title: "Gamma Prediction"
+title: "Maternal Health Risk"
 author: "Isaac Finkell"
 date: "2024-12-05"
-output:
-  pdf_document: default
-  html_document: default
+output: html_document
 ---
-
 ```{r}
 #Dataset analysis
 tab.risklev = table(Maternal.Health.Risk.Data.Set$RiskLevel)
-age <- tapply(Maternal.Health.Risk.Data.Set$Age, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
-sbp <- tapply(Maternal.Health.Risk.Data.Set$SystolicBP, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
-dbp <- tapply(Maternal.Health.Risk.Data.Set$DiastolicBP, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
-bs <- tapply(Maternal.Health.Risk.Data.Set$BS, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
-bt <- tapply(Maternal.Health.Risk.Data.Set$BodyTemp, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
-hr <- tapply(Maternal.Health.Risk.Data.Set$HeartRate, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
-
-df <- data.frame(age , sbp, dbp, bs, bt, hr)
-colnames(df) <- c("Age", "Systolic BP", "Diastolic BP", "Blood Glucose", "Body Temp", "Heart Rate")
-df
+tapply(Maternal.Health.Risk.Data.Set$Age, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
+tapply(Maternal.Health.Risk.Data.Set$SystolicBP, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
+tapply(Maternal.Health.Risk.Data.Set$DiastolicBP, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
+tapply(Maternal.Health.Risk.Data.Set$BS, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
+tapply(Maternal.Health.Risk.Data.Set$BodyTemp, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
+tapply(Maternal.Health.Risk.Data.Set$HeartRate, Maternal.Health.Risk.Data.Set$RiskLevel, mean, na.rm = TRUE)
 ```
 
 ```{r setup, include=FALSE}
 #Data Preparation
 MRH = Maternal.Health.Risk.Data.Set
 MRH = MRH[MRH$RiskLevel != 'mid risk',]
+MRH = MRH[MRH$HeartRate >= 60,]
 
 MRH$RiskLevel = ifelse(MRH$RiskLevel == 'high risk', 1, 0)
+row.names(MRH) = 1:nrow(MRH)
 ```
+
+```{r}
+High.risk = sum(MRH$RiskLevel)
+Low.risk = nrow(MRH) - High.risk
+
+High.risk
+Low.risk
+```
+
 
 ```{r}
 library(GGally)
@@ -39,42 +43,32 @@ ggpairs(MRH)
 ```{r}
 library(car)
 
-MRH.logreg1 = glm(MRH$RiskLevel ~ ., data = MRH, family = binomial)
-summary(MRH.logreg1)
+MRH.logreg = glm(MRH$RiskLevel ~ ., data = MRH, family = binomial)
+summary(MRH.logreg)
 
-MRH.logreg2 = glm(MRH$RiskLevel ~ MRH$SystolicBP + MRH$BS  + MRH$BodyTemp + MRH$HeartRate, data = MRH, family = binomial)
+MRH.logreg = glm(MRH$RiskLevel ~ MRH$SystolicBP + MRH$BS  + MRH$BodyTemp + MRH$HeartRate, data = MRH, family = binomial)
+summary(MRH.logreg)
+
+MRH.logreg2 = glm(MRH$RiskLevel ~ MRH$SystolicBP + MRH$BS  + MRH$BodyTemp, data = MRH, family = binomial)
 summary(MRH.logreg2)
-
-MRH.logreg3 = glm(MRH$RiskLevel ~ MRH$SystolicBP + MRH$BS  + MRH$BodyTemp, data = MRH, family = binomial)
-summary(MRH.logreg3)
 
 #While diastolic blood pressure seems to have slightly less covariance with other predictors than systolic bp, systolic is more statistically significant and appears to lead to a more accurate confusion matrix
 
-vif1 <- data.frame(vif(MRH.logreg1))
-vif2 <- data.frame(vif(MRH.logreg2))
-vif3 <- data.frame(vif(MRH.logreg3))
-colnames(vif1) <- "Variance Inflation Factor"
-colnames(vif2) <- "Variance Inflation Factor"
-colnames(vif3) <- "Variance Inflation Factor"
-vif1
-vif2
-vif3
+vif(MRH.logreg)
+vif(MRH.logreg2)
 ```
-
 ```{r}
-predicted = predict(MRH.logreg2, type = "response")
+predicted = predict(MRH.logreg, type = "response")
 pred.risk = ifelse(predicted > 0.35, 1, 0)
 table(pred.risk, MRH$RiskLevel)
 
 
-predicted2 = predict(MRH.logreg3, type = "response")
+predicted2 = predict(MRH.logreg2, type = "response")
 pred.risk2 = ifelse(predicted2 > 0.35, 1, 0)
 conf.table = table(pred.risk2, MRH$RiskLevel)
 conf.table
-
 #We select for the second model which excludes heart rate as we receive a better confusion matrix
 ```
-
 ```{r}
 plot(predicted2)
 ```
@@ -99,8 +93,9 @@ FPR
 TPR
 PPv
 NPv
-Stats <- c('False Positive Rate', 'True Positive Rate', 'Positive Predicted Value', 'Negative Predicted Value')
-Values <- c(FPR, TPR, PPv, NPv)
-data.frame(Stats, Values)
-
 ```
+
+
+
+
+
